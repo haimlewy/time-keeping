@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Haim Lewy\\\\Programing\\\\Time Keeping\\\\templates\\\\departments\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Haim Lewy\\\\Programing\\\\Time Keeping\\\\templates\\\\employees\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Haim Lewy\\\\Programing\\\\Time Keeping\\\\templates\\\\time\")",
+      "PowerShell(New-Item -ItemType Directory -Force \"c:\\\\Users\\\\Haim Lewy\\\\Programing\\\\Time Keeping\\\\static\\\\css\")"
+    ]
+  }
+}

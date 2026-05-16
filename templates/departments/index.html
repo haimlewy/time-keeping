@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}Departments{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-building me-2 text-primary"></i>Departments</h2>
+  <a href="{{ url_for('add_department') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Add Department
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="card-body p-0">
+    {% if departments %}
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th class="px-4">#</th>
+          <th>Name</th>
+          <th>Description</th>
+          <th>Employees</th>
+          <th class="text-end px-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dept in departments %}
+        <tr>
+          <td class="px-4 text-muted">{{ loop.index }}</td>
+          <td class="fw-semibold">{{ dept.name }}</td>
+          <td class="text-muted">{{ dept.description or '—' }}</td>
+          <td>
+            <span class="badge bg-primary rounded-pill">
+              {{ dept.employees | length }}
+            </span>
+          </td>
+          <td class="text-end px-4">
+            <a href="{{ url_for('edit_department', dept_id=dept.id) }}"
+               class="btn btn-sm btn-outline-secondary me-1">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form action="{{ url_for('delete_department', dept_id=dept.id) }}"
+                  method="POST" class="d-inline"
+                  onsubmit="return confirm('Delete department {{ dept.name }}?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-building fs-2 mb-2 d-block"></i>
+      No departments yet. <a href="{{ url_for('add_department') }}">Add one now.</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

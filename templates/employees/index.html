@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+{% block title %}Employees{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-people me-2 text-primary"></i>Employees</h2>
+  <a href="{{ url_for('add_employee') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Add Employee
+  </a>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm rounded-3 mb-3">
+  <div class="card-body py-3">
+    <form method="GET" class="row g-2 align-items-end">
+      <div class="col-sm-5">
+        <label class="form-label small fw-semibold mb-1">Search</label>
+        <input type="text" name="search" class="form-control form-control-sm"
+               placeholder="Name or email…" value="{{ search }}" />
+      </div>
+      <div class="col-sm-4">
+        <label class="form-label small fw-semibold mb-1">Department</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">All Departments</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}" {% if dept_filter == dept.id|string %}selected{% endif %}>
+            {{ dept.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-3">
+        <button type="submit" class="btn btn-sm btn-primary w-100">
+          <i class="bi bi-search me-1"></i> Filter
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="card-body p-0">
+    {% if employees %}
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th class="px-4">Name</th>
+          <th>Job Title</th>
+          <th>Department</th>
+          <th>Manager</th>
+          <th>Hire Date</th>
+          <th>Status</th>
+          <th class="text-end px-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for emp in employees %}
+        <tr>
+          <td class="px-4">
+            <a href="{{ url_for('view_employee', emp_id=emp.id) }}" class="text-decoration-none fw-semibold">
+              {{ emp.full_name }}
+            </a>
+            <div class="text-muted small">{{ emp.email }}</div>
+          </td>
+          <td>{{ emp.job_title or '—' }}</td>
+          <td>{{ emp.department.name if emp.department else '—' }}</td>
+          <td>{{ emp.manager.full_name if emp.manager else '—' }}</td>
+          <td>{{ emp.hire_date.strftime('%b %d, %Y') if emp.hire_date else '—' }}</td>
+          <td>
+            {% if emp.is_active %}
+              {% if emp.is_clocked_in %}
+                <span class="badge badge-clocked-in rounded-pill px-3 py-1">Clocked In</span>
+              {% else %}
+                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1">Active</span>
+              {% endif %}
+            {% else %}
+              <span class="badge bg-secondary rounded-pill px-3 py-1">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="text-end px-4">
+            <a href="{{ url_for('view_employee', emp_id=emp.id) }}"
+               class="btn btn-sm btn-outline-primary me-1" title="View">
+              <i class="bi bi-eye"></i>
+            </a>
+            <a href="{{ url_for('edit_employee', emp_id=emp.id) }}"
+               class="btn btn-sm btn-outline-secondary me-1" title="Edit">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form action="{{ url_for('delete_employee', emp_id=emp.id) }}"
+                  method="POST" class="d-inline"
+                  onsubmit="return confirm('Delete {{ emp.full_name }}? This also removes their time records.')">
+              <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-people fs-2 mb-2 d-block"></i>
+      No employees found. <a href="{{ url_for('add_employee') }}">Add one now.</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

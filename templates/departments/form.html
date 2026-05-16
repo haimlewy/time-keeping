@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Department{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>
+    <i class="bi bi-building me-2 text-primary"></i>
+    {{ action }} Department
+  </h2>
+  <a href="{{ url_for('departments') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Back
+  </a>
+</div>
+
+<div class="form-card">
+  <form method="POST">
+    <div class="mb-4">
+      <label class="form-label" for="name">Department Name <span class="text-danger">*</span></label>
+      <input type="text" id="name" name="name" class="form-control form-control-lg"
+             placeholder="e.g. Engineering"
+             value="{{ dept.name if dept else '' }}" required />
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label" for="description">Description</label>
+      <textarea id="description" name="description" class="form-control" rows="3"
+                placeholder="Optional description">{{ dept.description if dept else '' }}</textarea>
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i> {{ action }} Department
+      </button>
+      <a href="{{ url_for('departments') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

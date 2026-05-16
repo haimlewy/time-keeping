@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+{% block title %}{{ emp.full_name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>
+    <i class="bi bi-person-circle me-2 text-primary"></i>
+    {{ emp.full_name }}
+  </h2>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('edit_employee', emp_id=emp.id) }}" class="btn btn-outline-secondary">
+      <i class="bi bi-pencil me-1"></i> Edit
+    </a>
+    <a href="{{ url_for('employees') }}" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Back
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Profile card -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm rounded-3 p-4 text-center">
+      <div class="mb-3">
+        <div class="rounded-circle d-inline-flex align-items-center justify-content-center"
+             style="width:80px;height:80px;background:#dbeafe;font-size:2rem;color:#3b82f6;">
+          {{ emp.first_name[0] }}{{ emp.last_name[0] }}
+        </div>
+      </div>
+      <h5 class="fw-bold mb-1">{{ emp.full_name }}</h5>
+      <div class="text-muted small mb-3">{{ emp.job_title or 'No title' }}</div>
+
+      {% if emp.is_active %}
+        {% if emp.is_clocked_in %}
+          <span class="badge badge-clocked-in rounded-pill px-3 py-2 fs-6 mb-3">
+            <i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>Clocked In
+          </span>
+        {% else %}
+          <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 fs-6 mb-3">Active</span>
+        {% endif %}
+      {% else %}
+        <span class="badge bg-secondary rounded-pill px-3 py-2 fs-6 mb-3">Inactive</span>
+      {% endif %}
+
+      <hr />
+      <div class="text-start">
+        <div class="mb-2 small">
+          <i class="bi bi-envelope text-muted me-2"></i>{{ emp.email }}
+        </div>
+        {% if emp.phone %}
+        <div class="mb-2 small">
+          <i class="bi bi-telephone text-muted me-2"></i>{{ emp.phone }}
+        </div>
+        {% endif %}
+        <div class="mb-2 small">
+          <i class="bi bi-building text-muted me-2"></i>
+          {{ emp.department.name if emp.department else 'No Department' }}
+        </div>
+        <div class="mb-2 small">
+          <i class="bi bi-person text-muted me-2"></i>
+          Manager: {{ emp.manager.full_name if emp.manager else 'None' }}
+        </div>
+        <div class="small">
+          <i class="bi bi-calendar text-muted me-2"></i>
+          Hired: {{ emp.hire_date.strftime('%b %d, %Y') if emp.hire_date else '—' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Direct reports -->
+    {% if emp.subordinates %}
+    <div class="card border-0 shadow-sm rounded-3 p-4 mt-3">
+      <h6 class="fw-bold mb-3">Direct Reports ({{ emp.subordinates | length }})</h6>
+      {% for sub in emp.subordinates %}
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="rounded-circle d-inline-flex align-items-center justify-content-center"
+             style="width:32px;height:32px;background:#f1f5f9;font-size:0.8rem;font-weight:600;">
+          {{ sub.first_name[0] }}{{ sub.last_name[0] }}
+        </div>
+        <div>
+          <a href="{{ url_for('view_employee', emp_id=sub.id) }}" class="text-decoration-none small fw-semibold">
+            {{ sub.full_name }}
+          </a>
+          <div class="text-muted" style="font-size:0.75rem;">{{ sub.job_title or '—' }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Time entries -->
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm rounded-3">
+      <div class="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3 px-4">
+        <h6 class="mb-0 fw-bold">Recent Time Entries</h6>
+        <span class="text-muted small">Total: <strong>{{ total_hours }} hrs</strong></span>
+      </div>
+      <div class="card-body p-0">
+        {% if entries %}
+        <table class="table mb-0">
+          <thead>
+            <tr>
+              <th class="px-4">Date</th>
+              <th>Clock In</th>
+              <th>Clock Out</th>
+              <th>Hours</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in entries %}
+            <tr>
+              <td class="px-4">{{ entry.clock_in.strftime('%b %d, %Y') }}</td>
+              <td>{{ entry.clock_in.strftime('%H:%M') }}</td>
+              <td>{{ entry.clock_out.strftime('%H:%M') if entry.clock_out else
+                    '<span class="badge badge-clocked-in">Active</span>' | safe }}</td>
+              <td>{{ entry.duration_hours if entry.duration_hours else '—' }}</td>
+              <td class="text-muted small">{{ entry.notes or '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+          <i class="bi bi-clock fs-2 mb-2 d-block"></i>
+          No time entries yet.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

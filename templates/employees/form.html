@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Employee{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2>
+    <i class="bi bi-person me-2 text-primary"></i>
+    {{ action }} Employee
+  </h2>
+  <a href="{{ url_for('employees') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Back
+  </a>
+</div>
+
+<div class="form-card" style="max-width:760px;">
+  <form method="POST">
+    <div class="row g-3">
+
+      <!-- Name -->
+      <div class="col-sm-6">
+        <label class="form-label" for="first_name">First Name <span class="text-danger">*</span></label>
+        <input type="text" id="first_name" name="first_name" class="form-control"
+               value="{{ emp.first_name if emp else '' }}" required placeholder="John" />
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label" for="last_name">Last Name <span class="text-danger">*</span></label>
+        <input type="text" id="last_name" name="last_name" class="form-control"
+               value="{{ emp.last_name if emp else '' }}" required placeholder="Doe" />
+      </div>
+
+      <!-- Contact -->
+      <div class="col-sm-6">
+        <label class="form-label" for="email">Email <span class="text-danger">*</span></label>
+        <input type="email" id="email" name="email" class="form-control"
+               value="{{ emp.email if emp else '' }}" required placeholder="john@company.com" />
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label" for="phone">Phone</label>
+        <input type="text" id="phone" name="phone" class="form-control"
+               value="{{ emp.phone if emp else '' }}" placeholder="+1 555 0100" />
+      </div>
+
+      <!-- Role -->
+      <div class="col-sm-6">
+        <label class="form-label" for="job_title">Job Title</label>
+        <input type="text" id="job_title" name="job_title" class="form-control"
+               value="{{ emp.job_title if emp else '' }}" placeholder="Software Engineer" />
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label" for="hire_date">Hire Date</label>
+        <input type="date" id="hire_date" name="hire_date" class="form-control"
+               value="{{ emp.hire_date.isoformat() if emp and emp.hire_date else '' }}" />
+      </div>
+
+      <!-- Org -->
+      <div class="col-sm-6">
+        <label class="form-label" for="department_id">Department</label>
+        <select id="department_id" name="department_id" class="form-select">
+          <option value="">— Select Department —</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}"
+            {% if emp and emp.department_id == dept.id %}selected{% endif %}>
+            {{ dept.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label" for="manager_id">Manager</label>
+        <select id="manager_id" name="manager_id" class="form-select">
+          <option value="">— No Manager —</option>
+          {% for mgr in managers %}
+          <option value="{{ mgr.id }}"
+            {% if emp and emp.manager_id == mgr.id %}selected{% endif %}>
+            {{ mgr.full_name }} — {{ mgr.job_title or mgr.department.name if mgr.department else mgr.full_name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Active toggle (edit only) -->
+      {% if emp %}
+      <div class="col-12">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch"
+                 id="is_active" name="is_active" {% if emp.is_active %}checked{% endif %} />
+          <label class="form-check-label" for="is_active">Active Employee</label>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <hr class="my-4" />
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i> {{ action }} Employee
+      </button>
+      <a href="{{ url_for('employees') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{% block title %}Clock In / Out{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-stopwatch me-2 text-primary"></i>Clock In / Out</h2>
+</div>
+
+<div class="row g-4">
+  <!-- Clock In panel -->
+  <div class="col-md-6">
+    <div class="clock-panel">
+      <h5 class="fw-bold mb-1"><i class="bi bi-box-arrow-in-right text-success me-2"></i>Clock In</h5>
+      <p class="text-muted small mb-4">Select an employee and record their start time.</p>
+      <form method="POST" action="{{ url_for('clock_in') }}">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Employee</label>
+          <select name="employee_id" class="form-select" required>
+            <option value="">— Select Employee —</option>
+            {% for emp in employees %}
+            {% if not emp.is_clocked_in %}
+            <option value="{{ emp.id }}">{{ emp.full_name }} — {{ emp.job_title or emp.department.name if emp.department else emp.full_name }}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Notes <span class="text-muted fw-normal">(optional)</span></label>
+          <input type="text" name="notes" class="form-control" placeholder="Project, task…" />
+        </div>
+        <button type="submit" class="btn-clock-in w-100">
+          <i class="bi bi-box-arrow-in-right me-2"></i>Clock In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Clock Out panel -->
+  <div class="col-md-6">
+    <div class="clock-panel">
+      <h5 class="fw-bold mb-1"><i class="bi bi-box-arrow-right text-danger me-2"></i>Clock Out</h5>
+      <p class="text-muted small mb-4">Select an employee that is currently clocked in.</p>
+      <form method="POST" action="{{ url_for('clock_out') }}">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Employee</label>
+          <select name="employee_id" class="form-select" required>
+            <option value="">— Select Employee —</option>
+            {% for emp in employees %}
+            {% if emp.is_clocked_in %}
+            <option value="{{ emp.id }}">
+              {{ emp.full_name }}
+              (in since {{ emp.active_entry.clock_in.strftime('%H:%M') }})
+            </option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div class="mb-4" style="height:62px;"></div>
+        <button type="submit" class="btn-clock-out w-100">
+          <i class="bi bi-box-arrow-right me-2"></i>Clock Out
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Current status -->
+<div class="card border-0 shadow-sm rounded-3 mt-4">
+  <div class="card-header bg-white border-bottom py-3 px-4">
+    <h6 class="mb-0 fw-bold">Today's Status</h6>
+  </div>
+  <div class="card-body">
+    {% if employees %}
+      {% for emp in employees %}
+      <div class="employee-status-card {{ 'clocked-in' if emp.is_clocked_in else 'clocked-out' }}">
+        <div class="d-flex align-items-center gap-3">
+          <div class="rounded-circle d-inline-flex align-items-center justify-content-center"
+               style="width:38px;height:38px;background:#f1f5f9;font-size:0.85rem;font-weight:600;flex-shrink:0;">
+            {{ emp.first_name[0] }}{{ emp.last_name[0] }}
+          </div>
+          <div>
+            <div class="fw-semibold">{{ emp.full_name }}</div>
+            <div class="text-muted small">{{ emp.job_title or emp.department.name if emp.department else '—' }}</div>
+          </div>
+        </div>
+        <div class="text-end">
+          {% if emp.is_clocked_in %}
+            <span class="badge badge-clocked-in rounded-pill px-3 py-1">
+              In since {{ emp.active_entry.clock_in.strftime('%H:%M') }}
+            </span>
+          {% else %}
+            <span class="badge badge-clocked-out rounded-pill px-3 py-1">Clocked Out</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="text-center py-4 text-muted">
+        No active employees. <a href="{{ url_for('add_employee') }}">Add employees first.</a>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
