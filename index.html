@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorkTrack – Employee Time Management</title>
+  <style>
+    :root {
+      --sidebar-w: 240px;
+      --bg0: #0f172a;
+      --bg1: #1e293b;
+      --bg2: #334155;
+      --accent: #6366f1;
+      --accent-h: #4f46e5;
+      --accent-l: #818cf8;
+      --text1: #f1f5f9;
+      --text2: #94a3b8;
+      --text3: #64748b;
+      --border: #334155;
+      --green: #10b981;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg0); color: var(--text1); display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar { width: var(--sidebar-w); background: var(--bg0); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100vh; flex-shrink: 0; }
+    .sidebar-brand { padding: 22px 20px 18px; border-bottom: 1px solid var(--border); }
+    .sidebar-brand h2 { font-size: 1.2rem; font-weight: 700; color: var(--accent-l); letter-spacing: -0.02em; }
+    .sidebar-brand span { font-size: 0.72rem; color: var(--text3); }
+    .sidebar-nav { flex: 1; padding: 12px 10px; overflow-y: auto; }
+    .nav-label { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text3); padding: 10px 10px 4px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; cursor: pointer; color: var(--text2); font-size: 0.88rem; transition: background .15s, color .15s; margin-bottom: 2px; user-select: none; }
+    .nav-item:hover { background: var(--bg2); color: var(--text1); }
+    .nav-item.active { background: rgba(99,102,241,.18); color: var(--accent-l); font-weight: 500; }
+    .nav-item svg { width: 17px; height: 17px; flex-shrink: 0; }
+    .sidebar-foot { padding: 14px 18px; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--text3); }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar { height: 58px; background: var(--bg1); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; }
+    .topbar-title { font-size: 1.05rem; font-weight: 600; }
+    .topbar-date { font-size: 0.82rem; color: var(--text3); }
+    .content { flex: 1; overflow-y: auto; padding: 24px; }
+
+    /* ── Pages ── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(190px,1fr)); gap: 14px; margin-bottom: 22px; }
+    .stat-card { background: var(--bg1); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+    .stat-icon { font-size: 1.4rem; margin-bottom: 10px; }
+    .stat-label { font-size: 0.73rem; text-transform: uppercase; letter-spacing: .05em; color: var(--text3); margin-bottom: 6px; }
+    .stat-value { font-size: 2rem; font-weight: 700; }
+    .stat-sub { font-size: 0.75rem; color: var(--text2); margin-top: 3px; }
+
+    /* ── Section header ── */
+    .sec-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .sec-title { font-size: 1.15rem; font-weight: 600; }
+
+    /* ── Buttons ── */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 0.855rem; font-weight: 500; cursor: pointer; border: none; transition: opacity .15s, background .15s; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:not(:disabled):hover { background: var(--accent-h); }
+    .btn-secondary { background: var(--bg2); color: var(--text1); border: 1px solid var(--border); }
+    .btn-secondary:not(:disabled):hover { background: #475569; }
+    .btn-danger { background: rgba(239,68,68,.14); color: var(--red); border: 1px solid rgba(239,68,68,.28); }
+    .btn-danger:not(:disabled):hover { background: rgba(239,68,68,.24); }
+    .btn-success { background: rgba(16,185,129,.14); color: var(--green); border: 1px solid rgba(16,185,129,.28); }
+    .btn-success:not(:disabled):hover { background: rgba(16,185,129,.24); }
+    .btn-sm { padding: 5px 10px; font-size: 0.78rem; }
+    .btn-lg { padding: 12px 28px; font-size: 1rem; }
+
+    /* ── Table ── */
+    .tbl-wrap { background: var(--bg1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .tbl-bar { padding: 14px 18px; border-bottom: 1px solid var(--border); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .search-box { padding: 7px 12px; background: var(--bg0); border: 1px solid var(--border); border-radius: 7px; color: var(--text1); font-size: 0.84rem; outline: none; min-width: 220px; }
+    .search-box:focus { border-color: var(--accent); }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: rgba(255,255,255,.025); }
+    th { padding: 11px 18px; text-align: left; font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--text3); border-bottom: 1px solid var(--border); }
+    td { padding: 13px 18px; font-size: .855rem; border-bottom: 1px solid rgba(51,65,85,.5); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.018); }
+    .actions { display: flex; gap: 4px; }
+
+    /* ── Badge ── */
+    .badge { display: inline-flex; align-items: center; padding: 2px 10px; border-radius: 999px; font-size: .73rem; font-weight: 500; }
+    .b-green { background: rgba(16,185,129,.14); color: var(--green); }
+    .b-gray { background: rgba(100,116,139,.14); color: var(--text3); }
+    .b-blue { background: rgba(99,102,241,.14); color: var(--accent-l); }
+
+    /* ── Avatar ── */
+    .avatar { width: 30px; height: 30px; border-radius: 50%; background: linear-gradient(135deg,var(--accent),var(--accent-l)); display: inline-flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .emp-cell { display: flex; align-items: center; gap: 9px; }
+    .emp-name { font-weight: 500; }
+    .emp-email { font-size: .73rem; color: var(--text3); }
+
+    /* ── Modal ── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 900; opacity: 0; pointer-events: none; transition: opacity .18s; }
+    .overlay.open { opacity: 1; pointer-events: all; }
+    .modal { background: var(--bg1); border: 1px solid var(--border); border-radius: 14px; width: 500px; max-width: 95vw; max-height: 90vh; overflow-y: auto; transform: scale(.96); transition: transform .18s; }
+    .overlay.open .modal { transform: scale(1); }
+    .modal-head { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+    .modal-head h3 { font-size: 1rem; font-weight: 600; }
+    .modal-x { background: none; border: none; color: var(--text3); cursor: pointer; font-size: 1.1rem; padding: 4px; border-radius: 4px; }
+    .modal-x:hover { color: var(--text1); }
+    .modal-body { padding: 22px; }
+    .modal-foot { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+    /* ── Form ── */
+    .fg { margin-bottom: 14px; }
+    .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    label { display: block; font-size: .75rem; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: .05em; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 9px 13px; background: var(--bg0); border: 1px solid var(--border); border-radius: 7px; color: var(--text1); font-size: .855rem; outline: none; transition: border-color .14s; color-scheme: dark; }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 32px; }
+    select option { background: var(--bg1); }
+
+    /* ── Clock card ── */
+    .clock-card { background: var(--bg1); border: 1px solid var(--border); border-radius: 14px; padding: 28px 24px; text-align: center; max-width: 380px; margin: 0 auto 22px; }
+    .clock-time { font-size: 2.8rem; font-weight: 700; font-variant-numeric: tabular-nums; margin: 12px 0 4px; }
+    .clock-date { font-size: .84rem; color: var(--text3); margin-bottom: 20px; }
+    .clock-pill { display: inline-block; padding: 5px 16px; border-radius: 999px; font-size: .82rem; margin-bottom: 14px; }
+    .clock-dur { font-size: .82rem; color: var(--text3); margin-bottom: 16px; min-height: 18px; }
+    .clock-btns { display: flex; gap: 10px; justify-content: center; }
+
+    /* ── Empty ── */
+    .empty { text-align: center; padding: 40px; color: var(--text3); }
+    .empty h3 { font-size: .9rem; color: var(--text2); margin-bottom: 6px; }
+    .empty p { font-size: .82rem; }
+
+    /* ── Dashboard panels ── */
+    .panels { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .panel { background: var(--bg1); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .panel-head { padding: 13px 18px; border-bottom: 1px solid var(--border); font-size: .88rem; font-weight: 600; }
+    .panel-row { padding: 11px 18px; border-bottom: 1px solid rgba(51,65,85,.45); display: flex; align-items: center; gap: 10px; font-size: .845rem; }
+    .panel-row:last-child { border-bottom: none; }
+    .pr-info { flex: 1; }
+    .pr-name { font-weight: 500; }
+    .pr-sub { font-size: .72rem; color: var(--text3); }
+    .pr-time { font-size: .72rem; color: var(--text3); }
+
+    /* ── Reports filter bar ── */
+    .filter-bar { background: var(--bg1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 18px; margin-bottom: 18px; display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; }
+    .fg-inline { display: flex; flex-direction: column; gap: 4px; }
+    .fg-inline label { margin: 0; }
+    .fg-inline input, .fg-inline select { width: auto; min-width: 150px; }
+
+    /* ── Toast ── */
+    .toasts { position: fixed; bottom: 22px; right: 22px; z-index: 9999; display: flex; flex-direction: column; gap: 7px; }
+    .toast { background: var(--bg1); border: 1px solid var(--border); border-radius: 9px; padding: 11px 15px; font-size: .845rem; display: flex; align-items: center; gap: 9px; min-width: 230px; box-shadow: 0 4px 14px rgba(0,0,0,.35); animation: tin .25s ease; }
+    .toast.success { border-left: 3px solid var(--green); }
+    .toast.error   { border-left: 3px solid var(--red); }
+    .toast.info    { border-left: 3px solid var(--accent); }
+    @keyframes tin { from { transform: translateX(110%); opacity: 0; } to { transform: none; opacity: 1; } }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <h2>WorkTrack</h2>
+    <span>Employee Time Management</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" data-page="dashboard" onclick="nav(this,'dashboard')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-label">Management</div>
+    <div class="nav-item" data-page="employees" onclick="nav(this,'employees')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Employees
+    </div>
+    <div class="nav-item" data-page="departments" onclick="nav(this,'departments')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Departments
+    </div>
+    <div class="nav-label">Time</div>
+    <div class="nav-item" data-page="time" onclick="nav(this,'time')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Time Tracking
+    </div>
+    <div class="nav-item" data-page="reports" onclick="nav(this,'reports')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      Reports
+    </div>
+  </nav>
+  <div class="sidebar-foot">WorkTrack v1.0</div>
+</aside>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title" id="pg-title">Dashboard</div>
+    <div class="topbar-date" id="topbar-date"></div>
+  </header>
+
+  <main class="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-label">Total Employees</div><div class="stat-value" id="s-emp">0</div><div class="stat-sub">Active</div></div>
+        <div class="stat-card"><div class="stat-icon">🏢</div><div class="stat-label">Departments</div><div class="stat-value" id="s-dept">0</div><div class="stat-sub">Configured</div></div>
+        <div class="stat-card"><div class="stat-icon">⏰</div><div class="stat-label">Clocked In Now</div><div class="stat-value" id="s-in">0</div><div class="stat-sub">Currently working</div></div>
+        <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-label">Hours Today</div><div class="stat-value" id="s-hrs">0</div><div class="stat-sub">Total logged</div></div>
+      </div>
+      <div class="panels">
+        <div class="panel"><div class="panel-head">Recent Clock Events</div><div id="d-events"><div class="empty"><h3>No activity yet</h3></div></div></div>
+        <div class="panel"><div class="panel-head">Recent Employees</div><div id="d-emps"><div class="empty"><h3>No employees yet</h3></div></div></div>
+      </div>
+    </div>
+
+    <!-- EMPLOYEES -->
+    <div class="page" id="page-employees">
+      <div class="sec-header">
+        <h2 class="sec-title">Employees</h2>
+        <button class="btn btn-primary" onclick="openEmpModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Employee
+        </button>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-bar">
+          <input class="search-box" type="text" placeholder="Search by name, title, email…" oninput="searchEmps(this.value)" />
+          <select id="dept-filter" onchange="deptFilter(this.value)" style="width:auto;min-width:160px;">
+            <option value="">All Departments</option>
+          </select>
+        </div>
+        <table><thead><tr><th>Employee</th><th>Job Title</th><th>Department</th><th>Manager</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="emp-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- DEPARTMENTS -->
+    <div class="page" id="page-departments">
+      <div class="sec-header">
+        <h2 class="sec-title">Departments</h2>
+        <button class="btn btn-primary" onclick="openDeptModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Department
+        </button>
+      </div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Name</th><th>Description</th><th>Employees</th><th>Actions</th></tr></thead>
+        <tbody id="dept-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- TIME TRACKING -->
+    <div class="page" id="page-time">
+      <div class="sec-header"><h2 class="sec-title">Time Tracking</h2></div>
+      <div class="clock-card">
+        <div class="clock-time" id="clk-time">00:00:00</div>
+        <div class="clock-date" id="clk-date"></div>
+        <div class="fg" style="text-align:left;margin-bottom:14px;">
+          <label>Select Employee</label>
+          <select id="clk-emp" onchange="refreshClockUI()"><option value="">— choose —</option></select>
+        </div>
+        <div class="clock-pill" id="clk-pill" style="display:none"></div>
+        <div class="clock-dur" id="clk-dur"></div>
+        <div class="clock-btns">
+          <button class="btn btn-success btn-lg" id="btn-in" onclick="clockIn()" disabled>Clock In</button>
+          <button class="btn btn-danger btn-lg" id="btn-out" onclick="clockOut()" disabled>Clock Out</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <div class="tbl-bar" style="justify-content:space-between;">
+          <strong style="font-size:.88rem;">Today's Records</strong>
+          <span id="today-total" style="font-size:.82rem;color:var(--text3);"></span>
+        </div>
+        <table><thead><tr><th>Employee</th><th>Clock In</th><th>Clock Out</th><th>Duration</th><th>Status</th></tr></thead>
+        <tbody id="time-tbody"></tbody></table>
+      </div>
+    </div>
+
+    <!-- REPORTS -->
+    <div class="page" id="page-reports">
+      <div class="sec-header">
+        <h2 class="sec-title">Reports</h2>
+        <button class="btn btn-secondary" onclick="exportCSV()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </button>
+      </div>
+      <div class="filter-bar">
+        <div class="fg-inline"><label>From</label><input type="date" id="r-from" onchange="runReport()" /></div>
+        <div class="fg-inline"><label>To</label><input type="date" id="r-to" onchange="runReport()" /></div>
+        <div class="fg-inline"><label>Employee</label><select id="r-emp" onchange="runReport()"><option value="">All</option></select></div>
+        <div class="fg-inline"><label>Department</label><select id="r-dept" onchange="runReport()"><option value="">All</option></select></div>
+      </div>
+      <div class="tbl-wrap">
+        <table><thead><tr><th>Employee</th><th>Department</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Hours</th></tr></thead>
+        <tbody id="rep-tbody"></tbody></table>
+        <div id="rep-summary" style="padding:13px 18px;border-top:1px solid var(--border);font-size:.82rem;color:var(--text3);"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══════════ MODALS ═══════════ -->
+
+<!-- Employee modal -->
+<div class="overlay" id="m-emp">
+  <div class="modal">
+    <div class="modal-head"><h3 id="m-emp-title">Add Employee</h3><button class="modal-x" onclick="closeM('m-emp')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="e-id"/>
+      <div class="frow">
+        <div class="fg"><label>First Name *</label><input id="e-fn" placeholder="First"/></div>
+        <div class="fg"><label>Last Name *</label><input id="e-ln" placeholder="Last"/></div>
+      </div>
+      <div class="fg"><label>Email *</label><input id="e-email" type="email" placeholder="email@company.com"/></div>
+      <div class="fg"><label>Job Title *</label><input id="e-title" placeholder="e.g. Software Engineer"/></div>
+      <div class="frow">
+        <div class="fg"><label>Department</label><select id="e-dept"><option value="">— None —</option></select></div>
+        <div class="fg"><label>Manager</label><select id="e-mgr"><option value="">— None —</option></select></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>Hire Date</label><input id="e-hire" type="date"/></div>
+        <div class="fg"><label>Status</label><select id="e-status"><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeM('m-emp')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEmp()">Save Employee</button>
+    </div>
+  </div>
+</div>
+
+<!-- Department modal -->
+<div class="overlay" id="m-dept">
+  <div class="modal" style="width:420px;">
+    <div class="modal-head"><h3 id="m-dept-title">Add Department</h3><button class="modal-x" onclick="closeM('m-dept')">✕</button></div>
+    <div class="modal-body">
+      <input type="hidden" id="d-id"/>
+      <div class="fg"><label>Department Name *</label><input id="d-name" placeholder="e.g. Engineering"/></div>
+      <div class="fg"><label>Description</label><textarea id="d-desc" rows="3" placeholder="Brief description…"></textarea></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeM('m-dept')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDept()">Save Department</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm modal -->
+<div class="overlay" id="m-confirm">
+  <div class="modal" style="width:380px;">
+    <div class="modal-head"><h3>Confirm Delete</h3><button class="modal-x" onclick="closeM('m-confirm')">✕</button></div>
+    <div class="modal-body"><p id="confirm-msg" style="color:var(--text2);font-size:.88rem;line-height:1.5;"></p></div>
+    <div class="modal-foot">
+      <button class="btn btn-secondary" onclick="closeM('m-confirm')">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toasts" id="toasts"></div>
+
+<script>
+// ─────────────────────────── DATA ───────────────────────────
+const KEY = k => 'wt_' + k;
+const load = k => JSON.parse(localStorage.getItem(KEY(k)) || '[]');
+const dump = (k,v) => localStorage.setItem(KEY(k), JSON.stringify(v));
+
+let depts = load('depts');
+let emps  = load('emps');
+let recs  = load('recs');
+
+function persist() { dump('depts',depts); dump('emps',emps); dump('recs',recs); }
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+// ─────────────────────────── NAVIGATION ───────────────────────────
+const titles = { dashboard:'Dashboard', employees:'Employees', departments:'Departments', time:'Time Tracking', reports:'Reports' };
+
+function nav(el, page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('pg-title').textContent = titles[page];
+  if (page === 'dashboard')   renderDash();
+  if (page === 'employees')   renderEmps();
+  if (page === 'departments') renderDepts();
+  if (page === 'time')        renderTime();
+  if (page === 'reports')     initReports();
+}
+
+// ─────────────────────────── CLOCK ───────────────────────────
+function tick() {
+  const n = new Date();
+  const el = document.getElementById('clk-time');
+  if (el) el.textContent = n.toLocaleTimeString('en-US',{hour12:false});
+  document.getElementById('clk-date').textContent = n.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('topbar-date').textContent = n.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric',year:'numeric'});
+  refreshDur();
+}
+setInterval(tick, 1000); tick();
+
+// ─────────────────────────── TOAST ───────────────────────────
+function toast(msg, type='info') {
+  const c = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.innerHTML = `<span>${{success:'✓',error:'✕',info:'ℹ'}[type]||'ℹ'}</span><span>${esc(msg)}</span>`;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
+}
+
+// ─────────────────────────── MODALS ───────────────────────────
+function openM(id) { document.getElementById(id).classList.add('open'); }
+function closeM(id) { document.getElementById(id).classList.remove('open'); }
+function confirm(msg, cb) {
+  document.getElementById('confirm-msg').textContent = msg;
+  document.getElementById('confirm-ok').onclick = () => { cb(); closeM('m-confirm'); };
+  openM('m-confirm');
+}
+
+// ─────────────────────────── HELPERS ───────────────────────────
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function today() { return new Date().toISOString().split('T')[0]; }
+function fmtTime(iso) { return new Date(iso).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:true}); }
+function duration(a,b) { const ms=new Date(b)-new Date(a); return `${Math.floor(ms/3600000)}h ${Math.floor((ms%3600000)/60000)}m`; }
+function initials(fn,ln) { return ((fn||'?')[0]+(ln||'?')[0]).toUpperCase(); }
+
+function setSelect(id, opts, val='') {
+  const s = document.getElementById(id);
+  const ph = s.options[0].textContent;
+  s.innerHTML = `<option value="">${ph}</option>`;
+  opts.forEach(o => { const opt=document.createElement('option'); opt.value=o.v; opt.textContent=o.l; s.appendChild(opt); });
+  s.value = val;
+}
+
+// ─────────────────────────── DEPARTMENTS ───────────────────────────
+function openDeptModal(id=null) {
+  document.getElementById('d-id').value = '';
+  document.getElementById('d-name').value = '';
+  document.getElementById('d-desc').value = '';
+  document.getElementById('m-dept-title').textContent = 'Add Department';
+  if (id) {
+    const d = depts.find(x=>x.id===id);
+    if (d) { document.getElementById('d-id').value=d.id; document.getElementById('d-name').value=d.name; document.getElementById('d-desc').value=d.desc||''; document.getElementById('m-dept-title').textContent='Edit Department'; }
+  }
+  openM('m-dept');
+}
+
+function saveDept() {
+  const name = document.getElementById('d-name').value.trim();
+  if (!name) { toast('Name is required','error'); return; }
+  const id = document.getElementById('d-id').value;
+  const obj = { id: id||uid(), name, desc: document.getElementById('d-desc').value.trim(), createdAt: id?(depts.find(x=>x.id===id)?.createdAt||new Date().toISOString()):new Date().toISOString() };
+  if (id) { depts = depts.map(d=>d.id===id?obj:d); toast('Department updated','success'); }
+  else     { depts.push(obj); toast('Department added','success'); }
+  persist(); closeM('m-dept'); renderDepts(); syncDropdowns();
+}
+
+function delDept(id) {
+  const d = depts.find(x=>x.id===id);
+  const n = emps.filter(e=>e.deptId===id).length;
+  confirm(`Delete "${d.name}"?${n?` ${n} employee(s) will be unassigned.`:''}`, () => {
+    depts = depts.filter(x=>x.id!==id);
+    emps  = emps.map(e=>e.deptId===id?{...e,deptId:''}:e);
+    persist(); renderDepts(); syncDropdowns(); toast('Deleted','success');
+  });
+}
+
+function renderDepts() {
+  const tb = document.getElementById('dept-tbody');
+  if (!depts.length) { tb.innerHTML='<tr><td colspan="4"><div class="empty"><h3>No departments yet</h3><p>Click "Add Department"</p></div></td></tr>'; return; }
+  tb.innerHTML = depts.map(d => {
+    const c = emps.filter(e=>e.deptId===d.id).length;
+    return `<tr>
+      <td><strong>${esc(d.name)}</strong></td>
+      <td style="color:var(--text2)">${esc(d.desc||'—')}</td>
+      <td>${c} employee${c!==1?'s':''}</td>
+      <td><div class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="openDeptModal('${d.id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="delDept('${d.id}')">Delete</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────── EMPLOYEES ───────────────────────────
+let empSearch='', empDept='';
+
+function openEmpModal(id=null) {
+  ['e-id','e-fn','e-ln','e-email','e-title'].forEach(x=>document.getElementById(x).value='');
+  document.getElementById('e-hire').value = today();
+  document.getElementById('e-status').value = 'active';
+  document.getElementById('m-emp-title').textContent = 'Add Employee';
+  setSelect('e-dept', depts.map(d=>({v:d.id,l:d.name})), '');
+  setSelect('e-mgr',  emps.filter(e=>e.id!==id).map(e=>({v:e.id,l:`${e.fn} ${e.ln}`})), '');
+  if (id) {
+    const e = emps.find(x=>x.id===id);
+    if (e) {
+      document.getElementById('e-id').value    = e.id;
+      document.getElementById('e-fn').value    = e.fn;
+      document.getElementById('e-ln').value    = e.ln;
+      document.getElementById('e-email').value = e.email;
+      document.getElementById('e-title').value = e.title;
+      document.getElementById('e-dept').value  = e.deptId||'';
+      document.getElementById('e-mgr').value   = e.mgrId||'';
+      document.getElementById('e-hire').value  = e.hire||'';
+      document.getElementById('e-status').value= e.status||'active';
+      document.getElementById('m-emp-title').textContent = 'Edit Employee';
+    }
+  }
+  openM('m-emp');
+}
+
+function saveEmp() {
+  const fn=document.getElementById('e-fn').value.trim(), ln=document.getElementById('e-ln').value.trim();
+  const email=document.getElementById('e-email').value.trim(), title=document.getElementById('e-title').value.trim();
+  if (!fn||!ln) { toast('First and last name required','error'); return; }
+  if (!email)   { toast('Email required','error'); return; }
+  if (!title)   { toast('Job title required','error'); return; }
+  const id = document.getElementById('e-id').value;
+  const obj = { id:id||uid(), fn, ln, email, title, deptId:document.getElementById('e-dept').value, mgrId:document.getElementById('e-mgr').value, hire:document.getElementById('e-hire').value, status:document.getElementById('e-status').value, createdAt:id?(emps.find(x=>x.id===id)?.createdAt||new Date().toISOString()):new Date().toISOString() };
+  if (id) { emps=emps.map(e=>e.id===id?obj:e); toast('Employee updated','success'); }
+  else    { emps.push(obj); toast('Employee added','success'); }
+  persist(); closeM('m-emp'); renderEmps(); syncDropdowns();
+}
+
+function delEmp(id) {
+  const e = emps.find(x=>x.id===id);
+  confirm(`Delete "${e.fn} ${e.ln}"? Their time records will also be removed.`, () => {
+    emps = emps.filter(x=>x.id!==id).map(x=>x.mgrId===id?{...x,mgrId:''}:x);
+    recs = recs.filter(r=>r.empId!==id);
+    persist(); renderEmps(); syncDropdowns(); toast('Deleted','success');
+  });
+}
+
+function searchEmps(v) { empSearch=v.toLowerCase(); renderEmps(); }
+function deptFilter(v) { empDept=v; renderEmps(); }
+
+function renderEmps() {
+  const tb = document.getElementById('emp-tbody');
+  const list = emps.filter(e => {
+    const m = `${e.fn} ${e.ln} ${e.email} ${e.title}`.toLowerCase().includes(empSearch);
+    return m && (!empDept || e.deptId===empDept);
+  });
+  if (!list.length) { tb.innerHTML=`<tr><td colspan="6"><div class="empty"><h3>${emps.length?'No results':'No employees yet'}</h3><p>${emps.length?'Try adjusting your search':'Click "Add Employee"'}</p></div></td></tr>`; return; }
+  tb.innerHTML = list.map(e => {
+    const dept = depts.find(d=>d.id===e.deptId);
+    const mgr  = emps.find(x=>x.id===e.mgrId);
+    return `<tr>
+      <td><div class="emp-cell"><div class="avatar">${initials(e.fn,e.ln)}</div><div><div class="emp-name">${esc(e.fn)} ${esc(e.ln)}</div><div class="emp-email">${esc(e.email)}</div></div></div></td>
+      <td style="color:var(--text2)">${esc(e.title)}</td>
+      <td>${dept?esc(dept.name):'<span style="color:var(--text3)">Unassigned</span>'}</td>
+      <td>${mgr?`${esc(mgr.fn)} ${esc(mgr.ln)}`:'<span style="color:var(--text3)">—</span>'}</td>
+      <td><span class="badge ${e.status==='active'?'b-green':'b-gray'}">${e.status==='active'?'Active':'Inactive'}</span></td>
+      <td><div class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="openEmpModal('${e.id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="delEmp('${e.id}')">Delete</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─────────────────────────── TIME TRACKING ───────────────────────────
+function activeRecord(empId) { return recs.find(r=>r.empId===empId&&r.date===today()&&!r.out); }
+
+function refreshClockUI() {
+  const id = document.getElementById('clk-emp').value;
+  const pill = document.getElementById('clk-pill');
+  const btnIn = document.getElementById('btn-in');
+  const btnOut = document.getElementById('btn-out');
+  if (!id) { btnIn.disabled=true; btnOut.disabled=true; pill.style.display='none'; return; }
+  const ar = activeRecord(id);
+  pill.style.display = 'inline-block';
+  if (ar) {
+    btnIn.disabled=true; btnOut.disabled=false;
+    pill.textContent='● Clocked In'; pill.style.background='rgba(16,185,129,.15)'; pill.style.color='var(--green)';
+  } else {
+    btnIn.disabled=false; btnOut.disabled=true;
+    pill.textContent='○ Not Clocked In'; pill.style.background='rgba(100,116,139,.12)'; pill.style.color='var(--text3)';
+  }
+}
+
+function refreshDur() {
+  const id = document.getElementById('clk-emp')?.value;
+  const el = document.getElementById('clk-dur');
+  if (!el) return;
+  if (!id) { el.textContent=''; return; }
+  const ar = activeRecord(id);
+  if (!ar) { el.textContent=''; return; }
+  const ms = Date.now()-new Date(ar.in).getTime();
+  const h=Math.floor(ms/3600000), m=Math.floor((ms%3600000)/60000), s=Math.floor((ms%60000)/1000);
+  el.textContent = `Working for: ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function clockIn() {
+  const id = document.getElementById('clk-emp').value;
+  if (!id) { toast('Select an employee','error'); return; }
+  recs.push({ id:uid(), empId:id, date:today(), in:new Date().toISOString(), out:null });
+  persist(); refreshClockUI(); renderTodayRecs();
+  const e=emps.find(x=>x.id===id); toast(`${e.fn} clocked in`,'success');
+}
+
+function clockOut() {
+  const id = document.getElementById('clk-emp').value;
+  const i = recs.findIndex(r=>r.empId===id&&r.date===today()&&!r.out);
+  if (i===-1) { toast('No active session','error'); return; }
+  recs[i].out = new Date().toISOString();
+  persist(); refreshClockUI(); renderTodayRecs();
+  const e=emps.find(x=>x.id===id); toast(`${e.fn} clocked out — ${duration(recs[i].in,recs[i].out)}`,'success');
+}
+
+function renderTodayRecs() {
+  const tb = document.getElementById('time-tbody');
+  const today_ = today();
+  const list = recs.filter(r=>r.date===today_).sort((a,b)=>new Date(b.in)-new Date(a.in));
+  if (!list.length) { tb.innerHTML='<tr><td colspan="5"><div class="empty"><h3>No records today</h3></div></td></tr>'; document.getElementById('today-total').textContent=''; return; }
+  let totalMs=0;
+  tb.innerHTML = list.map(r => {
+    const e=emps.find(x=>x.id===r.empId);
+    if (r.out) totalMs+=new Date(r.out)-new Date(r.in);
+    return `<tr>
+      <td><div class="emp-cell"><div class="avatar" style="font-size:.65rem;">${e?initials(e.fn,e.ln):'?'}</div><span>${e?esc(e.fn+' '+e.ln):'Unknown'}</span></div></td>
+      <td>${fmtTime(r.in)}</td>
+      <td>${r.out?fmtTime(r.out):'—'}</td>
+      <td>${r.out?duration(r.in,r.out):'In progress'}</td>
+      <td>${r.out?'<span class="badge b-gray">Done</span>':'<span class="badge b-blue">Active</span>'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('today-total').textContent = `Total: ${(totalMs/3600000).toFixed(1)} hrs`;
+}
+
+function renderTime() {
+  setSelect('clk-emp', emps.filter(e=>e.status==='active').map(e=>({v:e.id,l:`${e.fn} ${e.ln}`})), '');
+  refreshClockUI(); renderTodayRecs();
+}
+
+// ─────────────────────────── REPORTS ───────────────────────────
+function initReports() {
+  const t=today(), w=new Date(Date.now()-7*86400000).toISOString().split('T')[0];
+  document.getElementById('r-from').value=w;
+  document.getElementById('r-to').value=t;
+  setSelect('r-emp',  emps.map(e=>({v:e.id,l:`${e.fn} ${e.ln}`})), '');
+  setSelect('r-dept', depts.map(d=>({v:d.id,l:d.name})), '');
+  runReport();
+}
+
+function runReport() {
+  const from=document.getElementById('r-from').value, to=document.getElementById('r-to').value;
+  const eF=document.getElementById('r-emp').value, dF=document.getElementById('r-dept').value;
+  const tb=document.getElementById('rep-tbody');
+  let list=recs.filter(r=>{
+    if(from&&r.date<from)return false;
+    if(to&&r.date>to)return false;
+    if(eF&&r.empId!==eF)return false;
+    if(dF){const e=emps.find(x=>x.id===r.empId);if(!e||e.deptId!==dF)return false;}
+    return true;
+  }).sort((a,b)=>new Date(b.in)-new Date(a.in));
+  if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><h3>No records</h3><p>Adjust filters</p></div></td></tr>';document.getElementById('rep-summary').textContent='';return;}
+  let totalMs=0;
+  tb.innerHTML=list.map(r=>{
+    const e=emps.find(x=>x.id===r.empId),d=depts.find(x=>x.id===e?.deptId);
+    if(r.out)totalMs+=new Date(r.out)-new Date(r.in);
+    return `<tr><td>${e?esc(e.fn+' '+e.ln):'Unknown'}</td><td>${d?esc(d.name):'—'}</td><td>${r.date}</td><td>${fmtTime(r.in)}</td><td>${r.out?fmtTime(r.out):'<span class="badge b-blue">Active</span>'}</td><td>${r.out?duration(r.in,r.out):'—'}</td></tr>`;
+  }).join('');
+  document.getElementById('rep-summary').textContent=`${list.length} record(s) — Total: ${(totalMs/3600000).toFixed(1)} hrs`;
+}
+
+function exportCSV() {
+  const rows=[['Employee','Department','Date','Clock In','Clock Out','Hours']];
+  recs.forEach(r=>{
+    const e=emps.find(x=>x.id===r.empId),d=depts.find(x=>x.id===e?.deptId);
+    rows.push([e?`${e.fn} ${e.ln}`:'Unknown',d?d.name:'',r.date,fmtTime(r.in),r.out?fmtTime(r.out):'Active',r.out?duration(r.in,r.out):'']);
+  });
+  const csv=rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=Object.assign(document.createElement('a'),{href:URL.createObjectURL(new Blob([csv],{type:'text/csv'})),download:`worktrack-${today()}.csv`});
+  a.click(); toast('Exported','success');
+}
+
+// ─────────────────────────── DASHBOARD ───────────────────────────
+function renderDash() {
+  document.getElementById('s-emp').textContent  = emps.filter(e=>e.status==='active').length;
+  document.getElementById('s-dept').textContent = depts.length;
+  const t=today();
+  document.getElementById('s-in').textContent   = recs.filter(r=>r.date===t&&!r.out).length;
+  const ms=recs.filter(r=>r.date===t&&r.out).reduce((a,r)=>a+(new Date(r.out)-new Date(r.in)),0);
+  document.getElementById('s-hrs').textContent  = (ms/3600000).toFixed(1);
+
+  const evEl=document.getElementById('d-events');
+  const recent=[...recs].sort((a,b)=>new Date(b.in)-new Date(a.in)).slice(0,5);
+  evEl.innerHTML = recent.length ? recent.map(r=>{
+    const e=emps.find(x=>x.id===r.empId);
+    return `<div class="panel-row"><div class="avatar" style="font-size:.65rem;">${e?initials(e.fn,e.ln):'?'}</div><div class="pr-info"><div class="pr-name">${e?esc(e.fn+' '+e.ln):'Unknown'}</div><div class="pr-sub">${r.out?'Clocked out':'Clocked in'}</div></div><div class="pr-time">${fmtTime(r.in)}</div></div>`;
+  }).join('') : '<div class="empty"><h3>No activity yet</h3></div>';
+
+  const emEl=document.getElementById('d-emps');
+  const rEmp=[...emps].sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+  emEl.innerHTML = rEmp.length ? rEmp.map(e=>{
+    const d=depts.find(x=>x.id===e.deptId);
+    return `<div class="panel-row"><div class="avatar" style="font-size:.65rem;">${initials(e.fn,e.ln)}</div><div class="pr-info"><div class="pr-name">${esc(e.fn)} ${esc(e.ln)}</div><div class="pr-sub">${esc(e.title)}${d?' · '+esc(d.name):''}</div></div></div>`;
+  }).join('') : '<div class="empty"><h3>No employees yet</h3></div>';
+}
+
+// ─────────────────────────── SYNC DROPDOWNS ───────────────────────────
+function syncDropdowns() {
+  const df=document.getElementById('dept-filter');
+  const cur=df.value;
+  df.innerHTML='<option value="">All Departments</option>';
+  depts.forEach(d=>{const o=document.createElement('option');o.value=d.id;o.textContent=d.name;df.appendChild(o);});
+  df.value=cur;
+}
+
+// ─────────────────────────── INIT ───────────────────────────
+renderDash();
+syncDropdowns();
+</script>
+</body>
+</html>
