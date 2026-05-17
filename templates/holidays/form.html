@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Holiday{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-calendar-check me-2 text-primary"></i>{{ action }} Holiday</h2>
+  <a href="{{ url_for('holidays') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Back
+  </a>
+</div>
+
+<div class="form-card">
+  <form method="POST">
+    <div class="mb-3">
+      <label class="form-label">Holiday Name <span class="text-danger">*</span></label>
+      <input type="text" name="name" class="form-control"
+             value="{{ holiday.name if holiday else '' }}" required
+             placeholder="e.g. New Year's Day" />
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Date <span class="text-danger">*</span></label>
+      <input type="date" name="date" class="form-control"
+             value="{{ holiday.date.isoformat() if holiday else '' }}" required />
+      <div class="form-text">
+        For recurring holidays, only the month and day matter — the year is ignored.
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" role="switch"
+               id="is_recurring" name="is_recurring"
+               {% if holiday and holiday.is_recurring %}checked{% endif %} />
+        <label class="form-check-label fw-semibold" for="is_recurring">
+          Recurring every year
+        </label>
+      </div>
+      <div class="form-text ms-4">
+        Enable for national holidays that fall on the same date annually.
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label">Notes</label>
+      <input type="text" name="notes" class="form-control"
+             value="{{ holiday.notes if holiday else '' }}"
+             placeholder="Optional note" />
+    </div>
+
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i> {{ action }} Holiday
+      </button>
+      <a href="{{ url_for('holidays') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

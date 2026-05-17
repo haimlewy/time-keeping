@@ -41,25 +41,38 @@
 </div>
 
 <!-- Summary -->
+{% set total_late_mins = namespace(v=0) %}
+{% set total_ot_hours = namespace(v=0) %}
+{% set holiday_count = namespace(v=0) %}
+{% for info in enriched %}
+  {% if info.late_minutes %}{% set total_late_mins.v = total_late_mins.v + info.late_minutes %}{% endif %}
+  {% if info.overtime_hours %}{% set total_ot_hours.v = total_ot_hours.v + info.overtime_hours %}{% endif %}
+  {% if info.is_holiday %}{% set holiday_count.v = holiday_count.v + 1 %}{% endif %}
+{% endfor %}
+
 <div class="row g-3 mb-4">
-  <div class="col-sm-4">
+  <div class="col-sm-3">
     <div class="card stat-card p-3 text-center border-0 shadow-sm">
-      <div class="fs-3 fw-bold text-primary">{{ entries | length }}</div>
+      <div class="fs-3 fw-bold text-primary">{{ enriched | length }}</div>
       <div class="text-muted small">Total Entries</div>
     </div>
   </div>
-  <div class="col-sm-4">
+  <div class="col-sm-3">
     <div class="card stat-card p-3 text-center border-0 shadow-sm">
       <div class="fs-3 fw-bold text-success">{{ total_hours }}</div>
       <div class="text-muted small">Total Hours</div>
     </div>
   </div>
-  <div class="col-sm-4">
+  <div class="col-sm-3">
     <div class="card stat-card p-3 text-center border-0 shadow-sm">
-      <div class="fs-3 fw-bold text-info">
-        {{ (total_hours / entries | length) | round(2) if entries else 0 }}
-      </div>
-      <div class="text-muted small">Avg Hours / Entry</div>
+      <div class="fs-3 fw-bold text-danger">{{ total_late_mins.v }}</div>
+      <div class="text-muted small">Total Late (min)</div>
+    </div>
+  </div>
+  <div class="col-sm-3">
+    <div class="card stat-card p-3 text-center border-0 shadow-sm">
+      <div class="fs-3 fw-bold text-warning">{{ holiday_count.v }}</div>
+      <div class="text-muted small">Holiday Entries</div>
     </div>
   </div>
 </div>
@@ -67,33 +80,81 @@
 <!-- Table -->
 <div class="card border-0 shadow-sm rounded-3">
   <div class="card-body p-0">
-    {% if entries %}
+    {% if enriched %}
     <table class="table mb-0">
       <thead>
         <tr>
           <th class="px-4">Employee</th>
-          <th>Department</th>
+          <th>Agreement</th>
           <th>Date</th>
-          <th>Clock In</th>
-          <th>Clock Out</th>
+          <th>In</th>
+          <th>Out</th>
           <th>Hours</th>
+          <th>Late</th>
+          <th>Overtime</th>
           <th>Notes</th>
         </tr>
       </thead>
       <tbody>
-        {% for entry in entries %}
-        <tr>
+        {% for info in enriched %}
+        {% set entry = info.entry %}
+        <tr {% if info.is_holiday %}class="table-warning"{% endif %}>
           <td class="px-4">
             <a href="{{ url_for('view_employee', emp_id=entry.employee.id) }}"
                class="text-decoration-none fw-semibold">
               {{ entry.employee.full_name }}
             </a>
+            {% if entry.employee.department %}
+            <div class="text-muted" style="font-size:0.75rem;">
+              {{ entry.employee.department.name }}
+            </div>
+            {% endif %}
           </td>
-          <td>{{ entry.employee.department.name if entry.employee.department else '—' }}</td>
-          <td>{{ entry.clock_in.strftime('%b %d, %Y') }}</td>
+          <td class="small">
+            {% if entry.employee.agreement %}
+              <span class="badge bg-secondary-subtle text-secondary rounded-pill">
+                {{ entry.employee.agreement.pay_type_label }}
+              </span>
+              {% if entry.shift_template %}
+                <span class="badge bg-info-subtle text-info rounded-pill ms-1">
+                  {{ entry.shift_template.name }}
+                </span>
+              {% endif %}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {{ entry.clock_in.strftime('%b %d, %Y') }}
+            {% if info.is_holiday %}
+              <span class="badge bg-warning text-dark rounded-pill ms-1" style="font-size:0.65rem;">
+                <i class="bi bi-calendar-check"></i> Holiday
+              </span>
+            {% endif %}
+          </td>
           <td>{{ entry.clock_in.strftime('%H:%M') }}</td>
           <td>{{ entry.clock_out.strftime('%H:%M') if entry.clock_out else '—' }}</td>
-          <td class="fw-semibold">{{ entry.duration_hours }}</td>
+          <td class="fw-semibold">{{ entry.duration_hours or '—' }}</td>
+          <td>
+            {% if info.late_minutes %}
+              <span class="text-danger small fw-semibold">+{{ info.late_minutes }} min</span>
+            {% elif info.late_minutes == 0 %}
+              <span class="text-success small">On time</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if info.overtime_hours %}
+              <span class="text-info small fw-semibold">+{{ info.overtime_hours }} h</span>
+            {% elif info.short_hours %}
+              <span class="text-warning small fw-semibold">-{{ info.short_hours }} h short</span>
+            {% elif info.expected_hours is not none %}
+              <span class="text-muted small">—</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
           <td class="text-muted small">{{ entry.notes or '—' }}</td>
         </tr>
         {% endfor %}
@@ -102,6 +163,8 @@
         <tr>
           <td colspan="5" class="px-4 fw-bold">Total</td>
           <td class="fw-bold text-primary">{{ total_hours }} hrs</td>
+          <td class="fw-bold text-danger">{{ total_late_mins.v }} min</td>
+          <td class="fw-bold text-info">{{ "%.2f"|format(total_ot_hours.v) }} h OT</td>
           <td></td>
         </tr>
       </tfoot>

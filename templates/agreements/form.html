@@ -1,0 +1,243 @@
+{% extends 'base.html' %}
+{% block title %}{{ action }} Agreement{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-file-earmark-text me-2 text-primary"></i>{{ action }} Agreement</h2>
+  <a href="{{ url_for('agreements') }}" class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left me-1"></i> Back
+  </a>
+</div>
+
+<div class="form-card" style="max-width:760px;">
+  <form method="POST" id="agr-form">
+
+    <!-- Basic info -->
+    <div class="row g-3 mb-4">
+      <div class="col-sm-6">
+        <label class="form-label">Agreement Name <span class="text-danger">*</span></label>
+        <input type="text" name="name" class="form-control"
+               value="{{ agr.name if agr else '' }}" required
+               placeholder="e.g. Full-Time Monthly" />
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label">Pay Type <span class="text-danger">*</span></label>
+        <select name="pay_type" id="pay_type" class="form-select" required>
+          {% for val, label in [('hourly','Hourly'),('daily','Daily'),('monthly','Monthly'),('shift','Shift')] %}
+          <option value="{{ val }}" {% if agr and agr.pay_type == val %}selected{% endif %}>
+            {{ label }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-12">
+        <label class="form-label">Description</label>
+        <input type="text" name="description" class="form-control"
+               value="{{ agr.description if agr else '' }}"
+               placeholder="Optional description" />
+      </div>
+    </div>
+
+    <hr class="my-3" />
+
+    <!-- ── Hourly / Shift minimum section ── -->
+    <div id="section-hourly" class="agr-section">
+      <h6 class="fw-bold mb-3 text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em;">
+        Minimum Requirements
+      </h6>
+      <div class="row g-3">
+        <div class="col-sm-6">
+          <label class="form-label">Minimum hours per day</label>
+          <input type="number" name="min_hours_per_day" class="form-control"
+                 step="0.5" min="0" max="24"
+                 value="{{ agr.min_hours_per_day if agr and agr.min_hours_per_day else '' }}"
+                 placeholder="Leave blank = no minimum" />
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label">Minimum hours per week</label>
+          <input type="number" name="min_hours_per_week" class="form-control"
+                 step="0.5" min="0" max="168"
+                 value="{{ agr.min_hours_per_week if agr and agr.min_hours_per_week else '' }}"
+                 placeholder="Leave blank = no minimum" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Daily section ── -->
+    <div id="section-daily" class="agr-section">
+      <h6 class="fw-bold mb-3 text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em;">
+        Minimum Requirements
+      </h6>
+      <div class="col-sm-4">
+        <label class="form-label">Minimum days per week</label>
+        <input type="number" name="min_days_per_week" class="form-control"
+               min="1" max="7"
+               value="{{ agr.min_days_per_week if agr and agr.min_days_per_week else '' }}"
+               placeholder="Leave blank = no minimum" />
+      </div>
+    </div>
+
+    <!-- ── Monthly section ── -->
+    <div id="section-monthly" class="agr-section">
+      <h6 class="fw-bold mb-3 text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em;">
+        Schedule
+      </h6>
+      <div class="mb-3">
+        <div class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" role="switch"
+                 id="is_flexible" name="is_flexible"
+                 {% if agr and agr.is_flexible %}checked{% endif %} />
+          <label class="form-check-label fw-semibold" for="is_flexible">
+            Flexible schedule (employee sets own start time)
+          </label>
+        </div>
+      </div>
+
+      <!-- Flexible sub-section -->
+      <div id="sub-flexible" class="ps-3 border-start border-2 mb-3">
+        <div class="col-sm-4">
+          <label class="form-label">Required hours per day</label>
+          <input type="number" name="flexible_daily_hours" class="form-control"
+                 step="0.5" min="1" max="24"
+                 value="{{ agr.flexible_daily_hours if agr and agr.flexible_daily_hours else '' }}"
+                 placeholder="e.g. 8" />
+        </div>
+      </div>
+
+      <!-- Fixed sub-section -->
+      <div id="sub-fixed" class="ps-3 border-start border-2">
+        <div class="row g-3">
+          <div class="col-sm-4">
+            <label class="form-label">Work start time</label>
+            <input type="time" name="work_start_time" class="form-control"
+                   value="{{ agr.work_start_time.strftime('%H:%M') if agr and agr.work_start_time else '' }}" />
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label">Work end time</label>
+            <input type="time" name="work_end_time" class="form-control"
+                   value="{{ agr.work_end_time.strftime('%H:%M') if agr and agr.work_end_time else '' }}" />
+          </div>
+          <div class="col-sm-4">
+            <label class="form-label">Break (minutes)</label>
+            <input type="number" name="break_minutes" class="form-control"
+                   min="0" max="240"
+                   value="{{ agr.break_minutes if agr else '0' }}"
+                   placeholder="0" />
+          </div>
+        </div>
+        <div class="text-muted small mt-2">
+          <i class="bi bi-info-circle me-1"></i>
+          Late arrival and overtime will be calculated automatically in the time report.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Shift templates section ── -->
+    <div id="section-shift" class="agr-section">
+      <h6 class="fw-bold mb-3 text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:.05em;">
+        Shift Templates
+      </h6>
+      <div id="shift-list">
+        {% if agr and agr.shift_templates %}
+          {% for st in agr.shift_templates %}
+          <div class="shift-row row g-2 mb-2 align-items-center">
+            <div class="col-sm-4">
+              <input type="text" name="shift_name" class="form-control"
+                     placeholder="Shift name (e.g. Morning)"
+                     value="{{ st.name }}" />
+            </div>
+            <div class="col-sm-3">
+              <input type="time" name="shift_start" class="form-control"
+                     value="{{ st.start_time.strftime('%H:%M') }}" />
+            </div>
+            <div class="col-sm-3">
+              <input type="time" name="shift_end" class="form-control"
+                     value="{{ st.end_time.strftime('%H:%M') }}" />
+            </div>
+            <div class="col-sm-2">
+              <button type="button" class="btn btn-outline-danger btn-sm w-100"
+                      onclick="removeShift(this)">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        {% endif %}
+      </div>
+      <button type="button" class="btn btn-outline-secondary btn-sm mt-1"
+              onclick="addShift()">
+        <i class="bi bi-plus-lg me-1"></i> Add Shift
+      </button>
+      <div class="text-muted small mt-2">
+        <i class="bi bi-info-circle me-1"></i>
+        If end time is before start time, the shift crosses midnight.
+      </div>
+    </div>
+
+    <hr class="mt-4 mb-3" />
+    <div class="d-flex gap-2">
+      <button type="submit" class="btn btn-primary px-4">
+        <i class="bi bi-check-lg me-1"></i> {{ action }} Agreement
+      </button>
+      <a href="{{ url_for('agreements') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<script>
+const sections = {
+  hourly:  ['section-hourly'],
+  shift:   ['section-hourly', 'section-shift'],
+  daily:   ['section-daily'],
+  monthly: ['section-monthly'],
+};
+
+function showSections(payType) {
+  ['section-hourly','section-daily','section-monthly','section-shift'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  (sections[payType] || []).forEach(id => {
+    document.getElementById(id).style.display = 'block';
+  });
+  if (payType === 'monthly') updateMonthlyToggle();
+}
+
+function updateMonthlyToggle() {
+  const flex = document.getElementById('is_flexible').checked;
+  document.getElementById('sub-flexible').style.display = flex ? 'block' : 'none';
+  document.getElementById('sub-fixed').style.display    = flex ? 'none'  : 'block';
+}
+
+document.getElementById('pay_type').addEventListener('change', e => showSections(e.target.value));
+document.getElementById('is_flexible').addEventListener('change', updateMonthlyToggle);
+
+function addShift() {
+  const list = document.getElementById('shift-list');
+  const row = document.createElement('div');
+  row.className = 'shift-row row g-2 mb-2 align-items-center';
+  row.innerHTML = `
+    <div class="col-sm-4">
+      <input type="text" name="shift_name" class="form-control" placeholder="Shift name (e.g. Evening)" />
+    </div>
+    <div class="col-sm-3">
+      <input type="time" name="shift_start" class="form-control" />
+    </div>
+    <div class="col-sm-3">
+      <input type="time" name="shift_end" class="form-control" />
+    </div>
+    <div class="col-sm-2">
+      <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removeShift(this)">
+        <i class="bi bi-trash"></i>
+      </button>
+    </div>`;
+  list.appendChild(row);
+}
+
+function removeShift(btn) {
+  btn.closest('.shift-row').remove();
+}
+
+// Init on load
+showSections(document.getElementById('pay_type').value);
+</script>
+{% endblock %}

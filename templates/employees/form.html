@@ -72,10 +72,32 @@
           {% for mgr in managers %}
           <option value="{{ mgr.id }}"
             {% if emp and emp.manager_id == mgr.id %}selected{% endif %}>
-            {{ mgr.full_name }} — {{ mgr.job_title or mgr.department.name if mgr.department else mgr.full_name }}
+            {{ mgr.full_name }}{% if mgr.job_title %} — {{ mgr.job_title }}{% endif %}
           </option>
           {% endfor %}
         </select>
+      </div>
+
+      <!-- Employment Agreement -->
+      <div class="col-12">
+        <label class="form-label" for="agreement_id">
+          Employment Agreement
+        </label>
+        <select id="agreement_id" name="agreement_id" class="form-select">
+          <option value="">— No Agreement —</option>
+          {% for agr in agreements %}
+          <option value="{{ agr.id }}"
+            {% if emp and emp.agreement_id == agr.id %}selected{% endif %}>
+            {{ agr.name }} ({{ agr.pay_type_label }}
+            {%- if agr.schedule_summary %} — {{ agr.schedule_summary }}{% endif %})
+          </option>
+          {% endfor %}
+        </select>
+        {% if not agreements %}
+        <div class="form-text">
+          <a href="{{ url_for('add_agreement') }}">Create an agreement first</a> to assign one here.
+        </div>
+        {% endif %}
       </div>
 
       <!-- Active toggle (edit only) -->

@@ -44,13 +44,9 @@
 
       <hr />
       <div class="text-start">
-        <div class="mb-2 small">
-          <i class="bi bi-envelope text-muted me-2"></i>{{ emp.email }}
-        </div>
+        <div class="mb-2 small"><i class="bi bi-envelope text-muted me-2"></i>{{ emp.email }}</div>
         {% if emp.phone %}
-        <div class="mb-2 small">
-          <i class="bi bi-telephone text-muted me-2"></i>{{ emp.phone }}
-        </div>
+        <div class="mb-2 small"><i class="bi bi-telephone text-muted me-2"></i>{{ emp.phone }}</div>
         {% endif %}
         <div class="mb-2 small">
           <i class="bi bi-building text-muted me-2"></i>
@@ -67,6 +63,41 @@
       </div>
     </div>
 
+    <!-- Agreement card -->
+    {% if emp.agreement %}
+    <div class="card border-0 shadow-sm rounded-3 p-4 mt-3">
+      <h6 class="fw-bold mb-3">
+        <i class="bi bi-file-earmark-text text-primary me-2"></i>Employment Agreement
+      </h6>
+      <div class="small mb-1">
+        <span class="text-muted">Name:</span>
+        <strong class="ms-1">{{ emp.agreement.name }}</strong>
+      </div>
+      <div class="small mb-1">
+        <span class="text-muted">Pay type:</span>
+        <span class="badge bg-primary-subtle text-primary rounded-pill ms-1">
+          {{ emp.agreement.pay_type_label }}
+        </span>
+      </div>
+      {% if emp.agreement.schedule_summary %}
+      <div class="small mb-1">
+        <span class="text-muted">Schedule:</span>
+        <span class="ms-1">{{ emp.agreement.schedule_summary }}</span>
+      </div>
+      {% endif %}
+      {% if emp.agreement.pay_type == 'shift' and emp.agreement.shift_templates %}
+      <div class="small mt-2">
+        <span class="text-muted d-block mb-1">Shifts:</span>
+        {% for st in emp.agreement.shift_templates %}
+          <span class="badge bg-secondary-subtle text-secondary rounded-pill me-1 mb-1">
+            {{ st.label }}
+          </span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <!-- Direct reports -->
     {% if emp.subordinates %}
     <div class="card border-0 shadow-sm rounded-3 p-4 mt-3">
@@ -78,9 +109,8 @@
           {{ sub.first_name[0] }}{{ sub.last_name[0] }}
         </div>
         <div>
-          <a href="{{ url_for('view_employee', emp_id=sub.id) }}" class="text-decoration-none small fw-semibold">
-            {{ sub.full_name }}
-          </a>
+          <a href="{{ url_for('view_employee', emp_id=sub.id) }}"
+             class="text-decoration-none small fw-semibold">{{ sub.full_name }}</a>
           <div class="text-muted" style="font-size:0.75rem;">{{ sub.job_title or '—' }}</div>
         </div>
       </div>
@@ -97,26 +127,67 @@
         <span class="text-muted small">Total: <strong>{{ total_hours }} hrs</strong></span>
       </div>
       <div class="card-body p-0">
-        {% if entries %}
+        {% if enriched %}
         <table class="table mb-0">
           <thead>
             <tr>
               <th class="px-4">Date</th>
-              <th>Clock In</th>
-              <th>Clock Out</th>
+              <th>In</th>
+              <th>Out</th>
               <th>Hours</th>
-              <th>Notes</th>
+              {% if emp.agreement and emp.agreement.pay_type == 'monthly' %}
+              <th>Late</th>
+              <th>OT</th>
+              {% endif %}
+              {% if emp.agreement and emp.agreement.pay_type == 'shift' %}
+              <th>Shift</th>
+              {% endif %}
             </tr>
           </thead>
           <tbody>
-            {% for entry in entries %}
-            <tr>
-              <td class="px-4">{{ entry.clock_in.strftime('%b %d, %Y') }}</td>
+            {% for info in enriched %}
+            {% set entry = info.entry %}
+            <tr {% if info.is_holiday %}class="table-warning"{% endif %}>
+              <td class="px-4">
+                {{ entry.clock_in.strftime('%b %d, %Y') }}
+                {% if info.is_holiday %}
+                  <span class="badge bg-warning text-dark rounded-pill ms-1" title="Public Holiday">
+                    <i class="bi bi-calendar-check me-1"></i>Holiday
+                  </span>
+                {% endif %}
+              </td>
               <td>{{ entry.clock_in.strftime('%H:%M') }}</td>
-              <td>{{ entry.clock_out.strftime('%H:%M') if entry.clock_out else
-                    '<span class="badge badge-clocked-in">Active</span>' | safe }}</td>
+              <td>
+                {% if entry.clock_out %}
+                  {{ entry.clock_out.strftime('%H:%M') }}
+                {% else %}
+                  <span class="badge badge-clocked-in">Active</span>
+                {% endif %}
+              </td>
               <td>{{ entry.duration_hours if entry.duration_hours else '—' }}</td>
-              <td class="text-muted small">{{ entry.notes or '—' }}</td>
+              {% if emp.agreement and emp.agreement.pay_type == 'monthly' %}
+              <td>
+                {% if info.late_minutes %}
+                  <span class="text-danger small fw-semibold">+{{ info.late_minutes }} min</span>
+                {% else %}
+                  <span class="text-success small">On time</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if info.overtime_hours %}
+                  <span class="text-info small fw-semibold">+{{ info.overtime_hours }} h</span>
+                {% elif info.short_hours %}
+                  <span class="text-warning small fw-semibold">-{{ info.short_hours }} h</span>
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              {% endif %}
+              {% if emp.agreement and emp.agreement.pay_type == 'shift' %}
+              <td class="small text-muted">
+                {{ entry.shift_template.name if entry.shift_template else '—' }}
+              </td>
+              {% endif %}
             </tr>
             {% endfor %}
           </tbody>

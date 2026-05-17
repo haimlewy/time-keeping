@@ -13,21 +13,37 @@
       <h5 class="fw-bold mb-1"><i class="bi bi-box-arrow-in-right text-success me-2"></i>Clock In</h5>
       <p class="text-muted small mb-4">Select an employee and record their start time.</p>
       <form method="POST" action="{{ url_for('clock_in') }}">
+
         <div class="mb-3">
           <label class="form-label fw-semibold">Employee</label>
-          <select name="employee_id" class="form-select" required>
+          <select name="employee_id" id="clockin-emp" class="form-select" required>
             <option value="">— Select Employee —</option>
             {% for emp in employees %}
             {% if not emp.is_clocked_in %}
-            <option value="{{ emp.id }}">{{ emp.full_name }} — {{ emp.job_title or emp.department.name if emp.department else emp.full_name }}</option>
+            <option value="{{ emp.id }}" data-paytype="{{ emp.agreement.pay_type if emp.agreement else '' }}">
+              {{ emp.full_name }}
+              {%- if emp.job_title %} — {{ emp.job_title }}{% endif %}
+            </option>
             {% endif %}
             {% endfor %}
           </select>
         </div>
+
+        <!-- Shift selector — shown only for shift workers -->
+        <div id="shift-container" class="mb-3" style="display:none;">
+          <label class="form-label fw-semibold">Shift</label>
+          <select name="shift_template_id" id="shift-select" class="form-select">
+            <option value="">— Select Shift —</option>
+          </select>
+        </div>
+
         <div class="mb-4">
-          <label class="form-label fw-semibold">Notes <span class="text-muted fw-normal">(optional)</span></label>
+          <label class="form-label fw-semibold">
+            Notes <span class="text-muted fw-normal">(optional)</span>
+          </label>
           <input type="text" name="notes" class="form-control" placeholder="Project, task…" />
         </div>
+
         <button type="submit" class="btn-clock-in w-100">
           <i class="bi bi-box-arrow-in-right me-2"></i>Clock In
         </button>
@@ -80,13 +96,23 @@
           </div>
           <div>
             <div class="fw-semibold">{{ emp.full_name }}</div>
-            <div class="text-muted small">{{ emp.job_title or emp.department.name if emp.department else '—' }}</div>
+            <div class="text-muted small">
+              {{ emp.job_title or '' }}
+              {% if emp.agreement %}
+                <span class="badge bg-secondary-subtle text-secondary rounded-pill ms-1">
+                  {{ emp.agreement.pay_type_label }}
+                </span>
+              {% endif %}
+            </div>
           </div>
         </div>
         <div class="text-end">
           {% if emp.is_clocked_in %}
             <span class="badge badge-clocked-in rounded-pill px-3 py-1">
               In since {{ emp.active_entry.clock_in.strftime('%H:%M') }}
+              {% if emp.active_entry.shift_template %}
+                · {{ emp.active_entry.shift_template.name }}
+              {% endif %}
             </span>
           {% else %}
             <span class="badge badge-clocked-out rounded-pill px-3 py-1">Clocked Out</span>
@@ -101,4 +127,26 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+const employeeShifts = {{ employee_shifts_json | safe }};
+
+document.getElementById('clockin-emp').addEventListener('change', function() {
+  const empId = parseInt(this.value);
+  const container = document.getElementById('shift-container');
+  const shiftSelect = document.getElementById('shift-select');
+
+  if (employeeShifts[empId] && employeeShifts[empId].length > 0) {
+    container.style.display = 'block';
+    shiftSelect.innerHTML = '<option value="">— Select Shift —</option>';
+    employeeShifts[empId].forEach(s => {
+      shiftSelect.innerHTML +=
+        `<option value="${s.id}">${s.name} (${s.start}–${s.end})</option>`;
+    });
+  } else {
+    container.style.display = 'none';
+    shiftSelect.innerHTML = '<option value="">— Select Shift —</option>';
+  }
+});
+</script>
 {% endblock %}

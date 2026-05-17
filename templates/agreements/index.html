@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Employment Agreements{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-file-earmark-text me-2 text-primary"></i>Employment Agreements</h2>
+  <a href="{{ url_for('add_agreement') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> New Agreement
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="card-body p-0">
+    {% if agreements %}
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th class="px-4">Name</th>
+          <th>Pay Type</th>
+          <th>Schedule / Rules</th>
+          <th>Employees</th>
+          <th class="text-end px-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for agr in agreements %}
+        <tr>
+          <td class="px-4">
+            <div class="fw-semibold">{{ agr.name }}</div>
+            {% if agr.description %}
+              <div class="text-muted small">{{ agr.description }}</div>
+            {% endif %}
+          </td>
+          <td>
+            {% set colors = {'hourly':'primary','daily':'success','monthly':'warning','shift':'info'} %}
+            <span class="badge bg-{{ colors.get(agr.pay_type, 'secondary') }}-subtle
+                         text-{{ colors.get(agr.pay_type, 'secondary') }} rounded-pill px-3">
+              {{ agr.pay_type_label }}
+            </span>
+          </td>
+          <td class="text-muted small">{{ agr.schedule_summary }}</td>
+          <td>
+            <span class="badge bg-primary rounded-pill">{{ agr.employees | length }}</span>
+          </td>
+          <td class="text-end px-4">
+            <a href="{{ url_for('edit_agreement', agr_id=agr.id) }}"
+               class="btn btn-sm btn-outline-secondary me-1">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form action="{{ url_for('delete_agreement', agr_id=agr.id) }}"
+                  method="POST" class="d-inline"
+                  onsubmit="return confirm('Delete agreement {{ agr.name }}?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% if agr.pay_type == 'shift' and agr.shift_templates %}
+        <tr class="table-light">
+          <td colspan="5" class="px-4 py-2">
+            <small class="text-muted fw-semibold me-2">Shifts:</small>
+            {% for st in agr.shift_templates %}
+              <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3 me-1">
+                {{ st.label }}
+              </span>
+            {% endfor %}
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-file-earmark-text fs-2 mb-2 d-block"></i>
+      No agreements yet. <a href="{{ url_for('add_agreement') }}">Create one now.</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

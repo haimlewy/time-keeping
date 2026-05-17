@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% block title %}Public Holidays{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <h2><i class="bi bi-calendar-check me-2 text-primary"></i>Public Holidays</h2>
+  <a href="{{ url_for('add_holiday') }}" class="btn btn-primary">
+    <i class="bi bi-plus-lg me-1"></i> Add Holiday
+  </a>
+</div>
+
+<div class="alert alert-info border-0 shadow-sm d-flex gap-2 align-items-start mb-4">
+  <i class="bi bi-info-circle-fill mt-1 flex-shrink-0"></i>
+  <div>
+    Public holidays apply <strong>globally</strong> to all employees.
+    Absences on these dates are not counted as missing days in reports.
+    <strong>Recurring</strong> holidays repeat automatically every year on the same date.
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-3">
+  <div class="card-body p-0">
+    {% if holidays %}
+    <table class="table mb-0">
+      <thead>
+        <tr>
+          <th class="px-4">Holiday</th>
+          <th>Date</th>
+          <th>Recurring</th>
+          <th>Notes</th>
+          <th class="text-end px-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in holidays %}
+        <tr>
+          <td class="px-4 fw-semibold">{{ h.name }}</td>
+          <td>
+            {{ h.date.strftime('%B %d') }}{% if not h.is_recurring %}, {{ h.date.year }}{% endif %}
+          </td>
+          <td>
+            {% if h.is_recurring %}
+              <span class="badge bg-success-subtle text-success rounded-pill px-3">
+                <i class="bi bi-arrow-repeat me-1"></i>Every Year
+              </span>
+            {% else %}
+              <span class="badge bg-secondary-subtle text-secondary rounded-pill px-3">
+                Once
+              </span>
+            {% endif %}
+          </td>
+          <td class="text-muted small">{{ h.notes or '—' }}</td>
+          <td class="text-end px-4">
+            <a href="{{ url_for('edit_holiday', hid=h.id) }}"
+               class="btn btn-sm btn-outline-secondary me-1">
+              <i class="bi bi-pencil"></i>
+            </a>
+            <form action="{{ url_for('delete_holiday', hid=h.id) }}"
+                  method="POST" class="d-inline"
+                  onsubmit="return confirm('Delete holiday {{ h.name }}?')">
+              <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i class="bi bi-trash"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+      <i class="bi bi-calendar-check fs-2 mb-2 d-block"></i>
+      No public holidays defined. <a href="{{ url_for('add_holiday') }}">Add one now.</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
