@@ -1,8 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from extensions import db
 from models import Department, Employee, TimeEntry, EmploymentAgreement, ShiftTemplate, PublicHoliday
-from datetime import datetime, date, time as time_type
+from datetime import datetime, date, timedelta, time as time_type
 import json
+import random
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'timekeeping-secret-2024'
@@ -558,6 +559,289 @@ def time_report():
                            employees=employees_list,
                            date_from=date_from_str, date_to=date_to_str,
                            emp_filter=emp_filter)
+
+
+# ─── Demo seed ───────────────────────────────────────────────────────────────
+
+DEMO_HOLIDAYS = {
+    date(2026, 3, 6),  date(2026, 3, 31),
+    date(2026, 4, 1),  date(2026, 4, 3),  date(2026, 4, 6),
+    date(2026, 5, 1),
+}
+
+
+def _demo_working_days(year, month, include_weekends=False):
+    today = date.today()
+    d = date(year, month, 1)
+    days = []
+    while d.month == month and d <= today:
+        is_weekend = d.weekday() >= 5
+        if (include_weekends or not is_weekend) and d not in DEMO_HOLIDAYS:
+            days.append(d)
+        d += timedelta(days=1)
+    return days
+
+
+def _jitter(base_minutes, spread):
+    return base_minutes + random.randint(-spread, spread)
+
+
+def _make_dt(d, total_minutes):
+    total_minutes = max(0, min(23 * 60 + 59, total_minutes))
+    return datetime(d.year, d.month, d.day, total_minutes // 60, total_minutes % 60)
+
+
+@app.route('/admin/seed-demo', methods=['POST'])
+def seed_demo():
+    import random as _rnd
+    _rnd.seed(42)
+
+    # ── Departments ──────────────────────────────────────────────────────────
+    dept_specs = [
+        ('Engineering',     'Software development and systems'),
+        ('Human Resources', 'People operations and recruitment'),
+        ('Finance',         'Accounting and financial reporting'),
+        ('Sales',           'Business development and client relations'),
+        ('Operations',      'Day-to-day business operations'),
+    ]
+    dept_map = {}
+    for dname, ddesc in dept_specs:
+        d = Department.query.filter_by(name=dname).first()
+        if not d:
+            d = Department(name=dname, description=ddesc)
+            db.session.add(d)
+    db.session.flush()
+    for dname, _ in dept_specs:
+        dept_map[dname] = Department.query.filter_by(name=dname).first()
+
+    # ── Agreements ───────────────────────────────────────────────────────────
+    def _get_or_make_agr(name, **kw):
+        a = EmploymentAgreement.query.filter_by(name=name).first()
+        if not a:
+            a = EmploymentAgreement(name=name, **kw)
+            db.session.add(a)
+            db.session.flush()
+        return a
+
+    agr_fixed = _get_or_make_agr(
+        'Full-Time Monthly (Fixed)',
+        pay_type='monthly', is_flexible=False,
+        work_start_time=time_type(9, 0), work_end_time=time_type(17, 0),
+        break_minutes=60,
+        description='Standard 9–17 schedule, 1 hr lunch break',
+    )
+    agr_flex = _get_or_make_agr(
+        'Full-Time Monthly (Flexible)',
+        pay_type='monthly', is_flexible=True, flexible_daily_hours=8.0,
+        description='8 hrs/day, flexible start time',
+    )
+    agr_hourly = _get_or_make_agr(
+        'Part-Time Hourly',
+        pay_type='hourly', min_hours_per_day=4.0, min_hours_per_week=20.0,
+        description='Part-time, min 4 hrs/day and 20 hrs/week',
+    )
+    agr_shift = _get_or_make_agr(
+        'Shift Worker',
+        pay_type='shift',
+        description='Rotating morning and evening shifts',
+    )
+
+    # Shift templates
+    def _get_or_make_shift(agr_id, name, sh, sm, eh, em):
+        s = ShiftTemplate.query.filter_by(agreement_id=agr_id, name=name).first()
+        if not s:
+            s = ShiftTemplate(agreement_id=agr_id, name=name,
+                              start_time=time_type(sh, sm), end_time=time_type(eh, em))
+            db.session.add(s)
+            db.session.flush()
+        return s
+
+    morning_shift = _get_or_make_shift(agr_shift.id, 'Morning', 6, 0, 14, 0)
+    evening_shift = _get_or_make_shift(agr_shift.id, 'Evening', 14, 0, 22, 0)
+
+    # ── Employees ────────────────────────────────────────────────────────────
+    # (first_name, last_name, email, phone, job_title, dept, manager_email, agr, hire_date, late_bias)
+    # late_bias: minutes added to typical clock-in (negative = early bird, positive = habitually late)
+    EMP_SPECS = [
+        ('Sarah',   'Johnson',  'sarah.johnson@demo.com',   '+233 20 100 0001',
+         'Chief Executive Officer',    'Human Resources', None,
+         agr_fixed, date(2019, 3, 1),  -5),
+        ('Michael', 'Chen',     'michael.chen@demo.com',    '+233 20 100 0002',
+         'Engineering Manager',        'Engineering',     'sarah.johnson@demo.com',
+         agr_fixed, date(2020, 6, 15), 0),
+        ('Emily',   'Davis',    'emily.davis@demo.com',     '+233 20 100 0003',
+         'Senior Software Engineer',   'Engineering',     'michael.chen@demo.com',
+         agr_flex,  date(2021, 2, 1),  -30),   # early bird, starts ~7:30
+        ('James',   'Wilson',   'james.wilson@demo.com',    '+233 20 100 0004',
+         'Junior Developer',           'Engineering',     'michael.chen@demo.com',
+         agr_hourly, date(2023, 9, 1), 30),    # tends to start late
+        ('Linda',   'Martinez', 'linda.martinez@demo.com',  '+233 20 100 0005',
+         'HR Manager',                 'Human Resources', 'sarah.johnson@demo.com',
+         agr_fixed, date(2020, 1, 20), -10),
+        ('Robert',  'Taylor',   'robert.taylor@demo.com',   '+233 20 100 0006',
+         'Senior Accountant',          'Finance',         'sarah.johnson@demo.com',
+         agr_fixed, date(2018, 11, 1), 5),
+        ('Jessica', 'Brown',    'jessica.brown@demo.com',   '+233 20 100 0007',
+         'Sales Manager',              'Sales',           'sarah.johnson@demo.com',
+         agr_flex,  date(2021, 7, 12), 30),    # starts late ~9:30-10:00
+        ('David',   'Lee',      'david.lee@demo.com',       '+233 20 100 0008',
+         'Sales Representative',       'Sales',           'jessica.brown@demo.com',
+         agr_hourly, date(2024, 3, 1), 60),    # very flexible, starts late
+        ('Maria',   'Garcia',   'maria.garcia@demo.com',    '+233 20 100 0009',
+         'Operations Supervisor',      'Operations',      'sarah.johnson@demo.com',
+         agr_shift, date(2019, 8, 15), 0),
+        ('Kevin',   'Thompson', 'kevin.thompson@demo.com',  '+233 20 100 0010',
+         'Operations Technician',      'Operations',      'maria.garcia@demo.com',
+         agr_shift, date(2022, 4, 1),  0),
+    ]
+
+    emp_map = {}
+    for (fn, ln, email, phone, title, dept, mgr_email,
+         agr, hire_dt, _bias) in EMP_SPECS:
+        emp = Employee.query.filter_by(email=email).first()
+        if not emp:
+            emp = Employee(
+                first_name=fn, last_name=ln, email=email, phone=phone,
+                job_title=title, department_id=dept_map[dept].id,
+                agreement_id=agr.id, hire_date=hire_dt, is_active=True,
+            )
+            db.session.add(emp)
+        emp_map[email] = emp
+    db.session.flush()
+
+    for (_, _, email, _, _, _, mgr_email, *_rest) in EMP_SPECS:
+        if mgr_email:
+            emp_map[email].manager_id = emp_map[mgr_email].id
+    db.session.flush()
+
+    # ── Time Entries ─────────────────────────────────────────────────────────
+    entry_count = 0
+
+    weekday_days = []
+    for m in (3, 4, 5):
+        weekday_days.extend(_demo_working_days(2026, m, include_weekends=False))
+
+    all_days_incl_weekend = []
+    for m in (3, 4, 5):
+        all_days_incl_weekend.extend(_demo_working_days(2026, m, include_weekends=True))
+
+    for (_, _, email, _, _, _, _, agr, _, late_bias) in EMP_SPECS:
+        emp = emp_map[email]
+        _rnd.seed(hash(email) % 10000)   # per-employee seed for reproducibility
+
+        if agr in (agr_shift,):
+            work_days = all_days_incl_weekend
+        else:
+            work_days = weekday_days
+
+        for d in work_days:
+            # Skip if entry already exists
+            day_start = datetime(d.year, d.month, d.day, 0, 0)
+            day_end   = datetime(d.year, d.month, d.day, 23, 59)
+            if TimeEntry.query.filter(
+                TimeEntry.employee_id == emp.id,
+                TimeEntry.clock_in.between(day_start, day_end)
+            ).first():
+                continue
+
+            if agr == agr_fixed:
+                if _rnd.random() < 0.07:     # 7% absent
+                    continue
+                r = _rnd.random()
+                if r < 0.50:                 # On time / slightly early
+                    in_m = _jitter(9 * 60 + late_bias, 8)
+                elif r < 0.82:              # Slightly late
+                    in_m = _jitter(9 * 60 + late_bias + 12, 8)
+                else:                        # Genuinely late
+                    in_m = _jitter(9 * 60 + late_bias + 35, 15)
+                in_m = max(7 * 60, in_m)
+
+                r2 = _rnd.random()
+                if r2 < 0.45:
+                    out_m = _jitter(17 * 60, 10)
+                elif r2 < 0.80:
+                    out_m = _jitter(17 * 60 + 35, 15)
+                else:                        # Overtime
+                    out_m = _jitter(18 * 60 + 10, 25)
+                out_m = max(in_m + 360, min(21 * 60, out_m))
+
+                db.session.add(TimeEntry(
+                    employee_id=emp.id,
+                    clock_in=_make_dt(d, in_m),
+                    clock_out=_make_dt(d, out_m),
+                ))
+                entry_count += 1
+
+            elif agr == agr_flex:
+                if _rnd.random() < 0.07:
+                    continue
+                base_start = 9 * 60 + late_bias   # e.g. Emily=7:30, Jessica=9:30
+                in_m = _jitter(base_start, 25)
+                in_m = max(6 * 60, min(11 * 60, in_m))
+                worked = _rnd.uniform(7.5, 9.2)
+                out_m = in_m + int(worked * 60)
+                out_m = min(22 * 60, out_m)
+
+                db.session.add(TimeEntry(
+                    employee_id=emp.id,
+                    clock_in=_make_dt(d, in_m),
+                    clock_out=_make_dt(d, out_m),
+                ))
+                entry_count += 1
+
+            elif agr == agr_hourly:
+                if _rnd.random() < 0.22:   # part-timers miss more days
+                    continue
+                in_m = _jitter(9 * 60 + late_bias, 30)
+                in_m = max(8 * 60, min(13 * 60, in_m))
+                worked = _rnd.uniform(4.0, 7.0)
+                out_m = in_m + int(worked * 60)
+                out_m = min(20 * 60, out_m)
+
+                db.session.add(TimeEntry(
+                    employee_id=emp.id,
+                    clock_in=_make_dt(d, in_m),
+                    clock_out=_make_dt(d, out_m),
+                ))
+                entry_count += 1
+
+            elif agr == agr_shift:
+                is_weekend = d.weekday() >= 5
+                if _rnd.random() < (0.15 if is_weekend else 0.05):
+                    continue
+                week_num = d.isocalendar()[1]
+                if email == 'maria.garcia@demo.com':
+                    use_morning = (week_num % 2 == 0)
+                else:                        # Kevin: every 3rd week morning
+                    use_morning = (week_num % 3 == 0)
+
+                if use_morning:
+                    shift = morning_shift
+                    in_m  = _jitter(6 * 60, 10)
+                    out_m = _jitter(14 * 60, 12)
+                else:
+                    shift = evening_shift
+                    in_m  = _jitter(14 * 60, 10)
+                    out_m = _jitter(22 * 60, 12)
+
+                in_m  = max(0, in_m)
+                out_m = max(in_m + 360, min(23 * 60 + 50, out_m))
+
+                db.session.add(TimeEntry(
+                    employee_id=emp.id,
+                    clock_in=_make_dt(d, in_m),
+                    clock_out=_make_dt(d, out_m),
+                    shift_template_id=shift.id,
+                ))
+                entry_count += 1
+
+    db.session.commit()
+    flash(
+        f'Demo data seeded: 10 employees + {entry_count} time entries '
+        f'across Mar – May 2026.',
+        'success'
+    )
+    return redirect(url_for('dashboard'))
 
 
 # ─── DB init & migration ─────────────────────────────────────────────────────

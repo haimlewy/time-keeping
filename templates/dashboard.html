@@ -4,7 +4,22 @@
 {% block content %}
 <div class="page-header">
   <h2><i class="bi bi-speedometer2 me-2 text-primary"></i>Dashboard</h2>
+  {% if total_employees == 0 %}
+  <form action="{{ url_for('seed_demo') }}" method="POST"
+        onsubmit="return confirm('Load demo data? This creates 10 employees and ~3 months of time entries.')">
+    <button type="submit" class="btn btn-outline-secondary">
+      <i class="bi bi-database-add me-1"></i> Load Demo Data
+    </button>
+  </form>
+  {% endif %}
 </div>
+
+{% if today_holiday %}
+<div class="alert alert-warning border-0 shadow-sm d-flex gap-2 align-items-center mb-4">
+  <i class="bi bi-calendar-check-fill fs-5"></i>
+  <div>Today is a public holiday: <strong>{{ today_holiday.name }}</strong></div>
+</div>
+{% endif %}
 
 <!-- Stat cards -->
 <div class="row g-4 mb-4">
