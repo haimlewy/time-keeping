@@ -4,9 +4,18 @@
 {% block content %}
 <div class="page-header">
   <h2><i class="bi bi-calendar-check me-2 text-primary"></i>Public Holidays</h2>
-  <a href="{{ url_for('add_holiday') }}" class="btn btn-primary">
-    <i class="bi bi-plus-lg me-1"></i> Add Holiday
-  </a>
+  <div class="d-flex gap-2">
+    <form action="{{ url_for('seed_ghana_holidays') }}" method="POST"
+          onsubmit="return confirm('Load all Ghana statutory public holidays? Already existing holidays will be skipped.')">
+      <button type="submit" class="btn btn-outline-success">
+        <img src="https://flagcdn.com/16x12/gh.png" alt="GH" class="me-1" />
+        Load Ghana Holidays
+      </button>
+    </form>
+    <a href="{{ url_for('add_holiday') }}" class="btn btn-primary">
+      <i class="bi bi-plus-lg me-1"></i> Add Holiday
+    </a>
+  </div>
 </div>
 
 <div class="alert alert-info border-0 shadow-sm d-flex gap-2 align-items-start mb-4">

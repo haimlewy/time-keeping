@@ -313,6 +313,48 @@ def delete_holiday(hid):
     return redirect(url_for('holidays'))
 
 
+GHANA_HOLIDAYS = [
+    # Fixed recurring — same date every year
+    {'name': "New Year's Day",    'month': 1,  'day': 1,  'recurring': True,  'notes': 'Ghana statutory holiday'},
+    {'name': "Constitution Day",  'month': 1,  'day': 7,  'recurring': True,  'notes': 'Ghana statutory holiday'},
+    {'name': "Independence Day",  'month': 3,  'day': 6,  'recurring': True,  'notes': 'Ghana statutory holiday'},
+    {'name': "Labour Day",        'month': 5,  'day': 1,  'recurring': True,  'notes': 'Ghana statutory holiday'},
+    {'name': "Republic Day",      'month': 7,  'day': 1,  'recurring': True,  'notes': 'Ghana statutory holiday'},
+    {'name': "Founder's Day",     'month': 9,  'day': 21, 'recurring': True,  'notes': 'Ghana statutory holiday'},
+    {'name': "Christmas Day",     'month': 12, 'day': 25, 'recurring': True,  'notes': 'Ghana statutory holiday'},
+    {'name': "Boxing Day",        'month': 12, 'day': 26, 'recurring': True,  'notes': 'Ghana statutory holiday'},
+    # Movable — 2026 specific dates
+    {'name': "Good Friday",       'month': 4,  'day': 3,  'recurring': False, 'notes': '2026 date — update annually'},
+    {'name': "Easter Monday",     'month': 4,  'day': 6,  'recurring': False, 'notes': '2026 date — update annually'},
+    {'name': "Farmer's Day",      'month': 12, 'day': 4,  'recurring': False, 'notes': '2026 date (first Friday of Dec) — update annually'},
+    {'name': "Eid-Ul-Fitr",       'month': 3,  'day': 31, 'recurring': False, 'notes': '2026 approx. date — confirm with Office of Chief Imam'},
+    {'name': "Shaqq Day",         'month': 4,  'day': 1,  'recurring': False, 'notes': '2026 approx. date (day after Eid-Ul-Fitr)'},
+    {'name': "Eid-Ul-Adha",       'month': 6,  'day': 6,  'recurring': False, 'notes': '2026 approx. date — confirm with Office of Chief Imam'},
+]
+
+
+@app.route('/holidays/seed-ghana', methods=['POST'])
+def seed_ghana_holidays():
+    added = 0
+    skipped = 0
+    year = date.today().year
+    for h in GHANA_HOLIDAYS:
+        d = date(year, h['month'], h['day'])
+        existing = PublicHoliday.query.filter_by(name=h['name']).first()
+        if existing:
+            skipped += 1
+            continue
+        entry = PublicHoliday(name=h['name'], date=d,
+                              is_recurring=h['recurring'], notes=h['notes'])
+        db.session.add(entry)
+        added += 1
+    db.session.commit()
+    flash(f'Ghana holidays loaded: {added} added, {skipped} already existed.', 'success')
+    return redirect(url_for('holidays'))
+    flash('Holiday deleted.', 'success')
+    return redirect(url_for('holidays'))
+
+
 # ─── Employees ───────────────────────────────────────────────────────────────
 
 @app.route('/employees')
